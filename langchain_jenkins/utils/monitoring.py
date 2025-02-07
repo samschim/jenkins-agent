@@ -8,7 +8,36 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import psutil
 import redis.asyncio as redis
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
 from ..config.config import config
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Prometheus metrics
+REQUESTS_TOTAL = Counter(
+    'jenkins_agent_requests_total',
+    'Total number of requests',
+    ['endpoint', 'method', 'status']
+)
+RESPONSE_TIME = Histogram(
+    'jenkins_agent_response_time_seconds',
+    'Response time in seconds',
+    ['endpoint']
+)
+ACTIVE_TASKS = Gauge(
+    'jenkins_agent_active_tasks',
+    'Number of active tasks'
+)
+MEMORY_USAGE = Gauge(
+    'jenkins_agent_memory_usage_bytes',
+    'Memory usage in bytes'
+)
+CPU_USAGE = Gauge(
+    'jenkins_agent_cpu_usage_percent',
+    'CPU usage percentage'
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +67,13 @@ class PerformanceMonitor:
         self.redis = redis.from_url(config.redis_url)
         self.metrics = PerformanceMetrics()
         self.start_time = datetime.now()
+        
+        # Start Prometheus server
+        try:
+            start_http_server(8000)
+            logger.info("Started Prometheus metrics server on port 8000")
+        except Exception as e:
+            logger.error(f"Failed to start Prometheus server: {e}")
     
     async def record_metric(
         self,
@@ -69,6 +105,26 @@ class PerformanceMonitor:
                 f"{point.timestamp.isoformat()}:{value}": time.time()
             }
         )
+        
+        # Update Prometheus metrics
+        if metric_type == "response_time":
+            RESPONSE_TIME.labels(
+                endpoint=labels.get("function", "unknown")
+            ).observe(value)
+        elif metric_type == "error_rate":
+            REQUESTS_TOTAL.labels(
+                endpoint=labels.get("function", "unknown"),
+                method=labels.get("method", "unknown"),
+                status="error"
+            ).inc()
+        elif metric_type == "memory_usage":
+            MEMORY_USAGE.set(value * 1024 * 1024)  # Convert MB to bytes
+        elif metric_type == "cpu_usage":
+            CPU_USAGE.set(value)
+        
+        # Update active tasks
+        if metric_type == "task":
+            ACTIVE_TASKS.set(value)
         
         # Cleanup old metrics (keep last 24 hours)
         cleanup_threshold = time.time() - (24 * 60 * 60)
