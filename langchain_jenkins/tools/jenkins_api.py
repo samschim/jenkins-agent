@@ -2,6 +2,9 @@
 import httpx
 from typing import Dict, Any, Optional
 from ..config.config import config
+from ..utils.monitoring import monitor
+from ..utils.rate_limit import api_rate_limiter
+from ..utils.errors import error_handler, retry_on_error
 
 class JenkinsAPI:
     """Jenkins API client for interacting with Jenkins server."""
@@ -12,6 +15,10 @@ class JenkinsAPI:
         self.auth = (config.jenkins.user, config.jenkins.api_token)
         self.verify_ssl = config.jenkins.verify_ssl
         
+    @monitor.monitor_performance()
+    @error_handler
+    @retry_on_error(max_retries=3)
+    @api_rate_limiter.limit_api("{endpoint}")
     async def _request(
         self,
         method: str,
