@@ -1,60 +1,65 @@
 version: '3.8'
 
 services:
-  redis:
+  test:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    environment:
+      - JENKINS_URL=http://jenkins-test:8080
+      - JENKINS_USER=admin
+      - JENKINS_API_TOKEN=test-token
+      - OPENAI_API_KEY=test-key
+      - REDIS_URL=redis://redis-test:6379
+      - MONGODB_URL=mongodb://mongodb-test:27017
+      - TESTING=true
+    depends_on:
+      jenkins-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      mongodb-test:
+        condition: service_healthy
+    networks:
+      - test_net
+    command: ["pytest", "-v", "--cov=langchain_jenkins"]
+
+  jenkins-test:
+    build:
+      context: .
+      dockerfile: docker/jenkins/Dockerfile
+    environment:
+      - JENKINS_ADMIN_PASSWORD=admin
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    networks:
+      - test_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  redis-test:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    networks:
+      - test_net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 3
 
-  mongodb:
+  mongodb-test:
     image: mongo:6
-    ports:
-      - "27017:27017"
+    networks:
+      - test_net
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 3s
       retries: 3
 
-  lm-studio:
-    image: lmstudio/lmstudio:latest
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./models:/models
-    environment:
-      - MODEL_PATH=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-
-  jenkins:
-    image: jenkins/jenkins:lts
-    ports:
-      - "8081:8080"
-    environment:
-      - JENKINS_OPTS="--httpPort=8080"
-    healthcheck:
-      test: curl -f http://localhost:8080/login || exit 1
-      interval: 5s
-      timeout: 3s
-      retries: 3
+networks:
+  test_net:
+    driver: bridge
