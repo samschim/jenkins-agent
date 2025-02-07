@@ -1,3 +1,9 @@
+# 1. Bestehenden Code Dateien Analysieren.
+# 2. Bestehenden code verbessern
+# 3. LangChain Agent System erstellen, diese Datai (roadmap.md) schritt für schritt implementieren:
+- Dokumentiere deine Fortschritte in markdown dateien, ich werde später anhand dessen ein github wiki einrichten.
+- Erstelle nach jeder abgeschlossenen Ettape ein pull request.
+
 # Aufgabe ist es einen **LangChain-Agenten** zu erstellen, der einen **Jenkins CI-Server** verwaltet.
 
 ## 🚀 **Plan: LangChain-Agent für Jenkins Management**
