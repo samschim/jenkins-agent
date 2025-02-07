@@ -200,6 +200,160 @@ async def agents_command(interaction: discord.Interaction):
     
     await interaction.followup.send(embed=embed)
 
+@bot.tree.command(name="monitor", description="Monitor Jenkins status")
+async def monitor_command(interaction: discord.Interaction):
+    """Monitor Jenkins status.
+    
+    Args:
+        interaction: Discord interaction
+    """
+    await interaction.response.defer()
+    
+    result = await bot.execute_task("get system status")
+    
+    if result["status"] == "success":
+        status_data = result["result"]
+        embed = discord.Embed(
+            title="Jenkins Status",
+            color=discord.Color.green()
+        )
+        embed.add_field(
+            name="System Status",
+            value="✅ Online",
+            inline=False
+        )
+        embed.add_field(
+            name="Active Tasks",
+            value=str(status_data.get("active_tasks", 0)),
+            inline=True
+        )
+        embed.add_field(
+            name="Active Agents",
+            value=str(status_data.get("active_agents", 0)),
+            inline=True
+        )
+        embed.add_field(
+            name="Memory Usage",
+            value=f"{status_data.get('memory_usage', 0)}%",
+            inline=True
+        )
+        embed.add_field(
+            name="CPU Usage",
+            value=f"{status_data.get('cpu_usage', 0)}%",
+            inline=True
+        )
+    else:
+        embed = discord.Embed(
+            title="Jenkins Status",
+            description="Failed to get status",
+            color=discord.Color.red()
+        )
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="logs", description="Get recent build logs")
+@app_commands.describe(
+    job="Job name",
+    lines="Number of lines to show (default: 10)"
+)
+async def logs_command(
+    interaction: discord.Interaction,
+    job: str,
+    lines: Optional[int] = 10
+):
+    """Get recent build logs.
+    
+    Args:
+        interaction: Discord interaction
+        job: Job name
+        lines: Number of lines to show
+    """
+    await interaction.response.defer()
+    
+    result = await bot.execute_task(f"get logs for {job}")
+    
+    if result["status"] == "success":
+        logs = result["result"].get("logs", "No logs available")
+        # Get last N lines
+        log_lines = logs.split("\n")[-lines:]
+        log_text = "\n".join(log_lines)
+        
+        embed = discord.Embed(
+            title=f"Logs for {job}",
+            color=discord.Color.blue()
+        )
+        # Split logs into chunks if too long
+        if len(log_text) > 1000:
+            chunks = [log_text[i:i+1000] for i in range(0, len(log_text), 1000)]
+            for i, chunk in enumerate(chunks):
+                embed.add_field(
+                    name=f"Logs (part {i+1})",
+                    value=f"```\n{chunk}\n```",
+                    inline=False
+                )
+        else:
+            embed.add_field(
+                name="Logs",
+                value=f"```\n{log_text}\n```",
+                inline=False
+            )
+    else:
+        embed = discord.Embed(
+            title=f"Logs for {job}",
+            description="Failed to get logs",
+            color=discord.Color.red()
+        )
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="pipeline", description="Manage Jenkins pipelines")
+@app_commands.describe(
+    action="Action to perform",
+    pipeline="Pipeline name"
+)
+@app_commands.choices(action=[
+    app_commands.Choice(name="status", value="status"),
+    app_commands.Choice(name="start", value="start"),
+    app_commands.Choice(name="stop", value="stop")
+])
+async def pipeline_command(
+    interaction: discord.Interaction,
+    action: str,
+    pipeline: str
+):
+    """Manage Jenkins pipelines.
+    
+    Args:
+        interaction: Discord interaction
+        action: Action to perform
+        pipeline: Pipeline name
+    """
+    await interaction.response.defer()
+    
+    result = await bot.execute_task(f"{action} pipeline {pipeline}")
+    
+    if result["status"] == "success":
+        embed = discord.Embed(
+            title=f"Pipeline {action.title()}",
+            description=f"Successfully {action}ed pipeline {pipeline}",
+            color=discord.Color.green()
+        )
+        if isinstance(result["result"], dict):
+            for key, value in result["result"].items():
+                embed.add_field(
+                    name=key.replace("_", " ").title(),
+                    value=str(value),
+                    inline=True
+                )
+    else:
+        embed = discord.Embed(
+            title=f"Pipeline {action.title()}",
+            description=f"Failed to {action} pipeline {pipeline}",
+            color=discord.Color.red()
+        )
+    
+    await interaction.followup.send(embed=embed)
+
 @bot.tree.command(name="help", description="Show Jenkins bot help")
 async def help_command(interaction: discord.Interaction):
     """Show help information.
@@ -213,21 +367,21 @@ async def help_command(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
     
-    embed.add_field(
-        name="/task <description> [agent]",
-        value="Execute a Jenkins task",
-        inline=False
-    )
-    embed.add_field(
-        name="/agents",
-        value="List available agents",
-        inline=False
-    )
-    embed.add_field(
-        name="/help",
-        value="Show this help message",
-        inline=False
-    )
+    commands = [
+        ("/task <description> [agent]", "Execute a Jenkins task"),
+        ("/agents", "List available agents"),
+        ("/monitor", "Show Jenkins system status"),
+        ("/logs <job> [lines]", "Show recent build logs"),
+        ("/pipeline <action> <pipeline>", "Manage Jenkins pipelines"),
+        ("/help", "Show this help message")
+    ]
+    
+    for name, value in commands:
+        embed.add_field(
+            name=name,
+            value=value,
+            inline=False
+        )
     
     await interaction.response.send_message(embed=embed)
 
