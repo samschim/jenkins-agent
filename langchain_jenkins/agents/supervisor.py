@@ -4,6 +4,8 @@ from .base_agent import BaseAgent
 from .build_manager import BuildManagerAgent
 from .log_analyzer import LogAnalyzerAgent
 from .pipeline_manager import PipelineManagerAgent
+from .plugin_manager import PluginManagerAgent
+from .user_manager import UserManagerAgent
 
 class SupervisorAgent:
     """Supervisor agent that coordinates specialized Jenkins agents."""
@@ -13,7 +15,9 @@ class SupervisorAgent:
         self.agents = {
             "build": BuildManagerAgent(),
             "log": LogAnalyzerAgent(),
-            "pipeline": PipelineManagerAgent()
+            "pipeline": PipelineManagerAgent(),
+            "plugin": PluginManagerAgent(),
+            "user": UserManagerAgent()
         }
     
     def _determine_agent(self, task: str) -> str:
@@ -38,6 +42,14 @@ class SupervisorAgent:
         # Check for pipeline-related tasks
         if any(word in task_lower for word in ["pipeline", "stage", "workflow"]):
             return "pipeline"
+        
+        # Check for plugin-related tasks
+        if any(word in task_lower for word in ["plugin", "install", "update"]):
+            return "plugin"
+        
+        # Check for user-related tasks
+        if any(word in task_lower for word in ["user", "permission", "role"]):
+            return "user"
         
         # Default to build manager if unclear
         return "build"
