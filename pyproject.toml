@@ -1,67 +1,76 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["langchain_jenkins"]
-
-[project]
-name = "langchain_jenkins"
+[tool.poetry]
+name = "jenkins-langchain-agent"
 version = "0.1.0"
-description = "LangChain-based Jenkins agent system"
-readme = "README.md"
-requires-python = ">=3.10"
+description = "AI-powered Jenkins management system using LangChain"
+authors = ["OpenHands <openhands@all-hands.dev>"]
 license = "MIT"
-authors = [
-    { name = "OpenHands", email = "openhands@all-hands.dev" },
-]
-dependencies = [
-    "langchain>=0.0.300",
-    "openai>=0.28.0",
-    "httpx>=0.24.1",
-    "redis>=5.0.0",
-    "python-dotenv>=1.0.0",
-    "psutil>=5.9.0",
-    "prometheus-client>=0.17.0",
-    "numpy>=1.24.0",
-    "scikit-learn>=1.3.0",
-    "pandas>=2.1.0",
-    "fastapi>=0.100.0",
-    "uvicorn>=0.23.0",
-    "python-jose[cryptography]>=3.3.0",
-    "python-multipart>=0.0.6",
-    "click>=8.1.0",
-    "rich>=13.5.0",
-    "discord.py>=2.3.0",
-    "motor>=3.3.0",
-    "pymongo>=4.6.0",
-]
+readme = "README.md"
+repository = "https://github.com/samschim/jenkins-agent"
+documentation = "https://github.com/samschim/jenkins-agent/wiki"
 
-[project.optional-dependencies]
-test = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.11.1",
-    "aioresponses>=0.7.4",
-    "fakeredis>=2.19.0",
-]
+[tool.poetry.dependencies]
+python = "^3.8"
+langchain = "^0.1.0"
+openai = "^1.0.0"
+fastapi = "^0.100.0"
+uvicorn = "^0.23.0"
+aiohttp = "^3.8.5"
+redis = "^5.0.0"
+motor = "^3.3.0"
+click = "^8.1.0"
+rich = "^13.5.0"
+aioconsole = "^0.6.0"
+prometheus-client = "^0.17.0"
+pydantic = "^2.0.0"
+pydantic-settings = "^2.0.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+python-multipart = "^0.0.6"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+black = "^23.7.0"
+isort = "^5.12.0"
+mypy = "^1.5.0"
+pre-commit = "^3.3.0"
+pytest-mock = "^3.11.0"
+
+[tool.poetry.scripts]
+jenkins-agent = "langchain_jenkins.cli.jenkins_cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
 
 [tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --cov=langchain_jenkins --cov-report=html"
 testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = "-v --cov=langchain_jenkins --cov-report=term-missing"
 asyncio_mode = "auto"
-
-[tool.coverage.run]
-source = ["langchain_jenkins"]
-omit = ["tests/*", "**/__init__.py"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if __name__ == .__main__.:",
-    "raise NotImplementedError",
-    "pass",
+markers = [
+    "unit: mark test as unit test",
+    "integration: mark test as integration test",
+    "agent: mark test as agent test",
 ]

@@ -1,43 +1,41 @@
-FROM python:3.12-slim
+# Build stage
+FROM python:3.8-slim as builder
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    POETRY_VERSION=1.7.1
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
 # Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-
-# Set working directory
-WORKDIR /app
+RUN pip install poetry
 
 # Copy project files
 COPY pyproject.toml poetry.lock ./
-COPY langchain_jenkins ./langchain_jenkins
 COPY README.md ./
+COPY langchain_jenkins ./langchain_jenkins
 
 # Install dependencies
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root
+    && poetry install --no-dev --no-interaction --no-ansi
+
+# Runtime stage
+FROM python:3.8-slim
+
+WORKDIR /app
+
+# Copy from builder
+COPY --from=builder /usr/local/lib/python3.8/site-packages /usr/local/lib/python3.8/site-packages
+COPY --from=builder /app/langchain_jenkins ./langchain_jenkins
 
 # Create non-root user
-RUN useradd -m -u 1000 jenkins
+RUN useradd -m -u 1000 jenkins \
+    && chown -R jenkins:jenkins /app
+
 USER jenkins
 
-# Set Python path
+# Set environment variables
 ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+# Expose ports
+EXPOSE 8000
 
-# Command to run
-CMD ["poetry", "run", "python", "-m", "langchain_jenkins"]
+# Run application
+CMD ["python", "-m", "langchain_jenkins.web.app"]

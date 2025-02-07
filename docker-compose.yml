@@ -1,194 +1,35 @@
 version: '3.8'
 
 services:
-  # Infrastructure
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - JENKINS_URL=${JENKINS_URL}
+      - JENKINS_USER=${JENKINS_USER}
+      - JENKINS_API_TOKEN=${JENKINS_API_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URL=mongodb://mongodb:27017
+    depends_on:
+      - redis
+      - mongodb
+
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   mongodb:
     image: mongo:6
     ports:
       - "27017:27017"
     volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Core Components
-  webhook:
-    build:
-      context: .
-      dockerfile: docker/webhook/Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - MONGODB_URL=mongodb://mongodb:27017
-      - JENKINS_URL=${JENKINS_URL}
-      - JENKINS_USER=${JENKINS_USER}
-      - JENKINS_TOKEN=${JENKINS_TOKEN}
-    depends_on:
-      redis:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-
-  notifier:
-    build:
-      context: .
-      dockerfile: docker/notifier/Dockerfile
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - EMAIL_SMTP_HOST=${EMAIL_SMTP_HOST}
-    depends_on:
-      redis:
-        condition: service_healthy
-
-  # Agents
-  build_manager:
-    build:
-      context: .
-      dockerfile: docker/agent/Dockerfile
-    environment:
-      - AGENT_TYPE=build_manager
-      - PORT=8001
-      - REDIS_URL=redis://redis:6379
-      - MONGODB_URL=mongodb://mongodb:27017
-      - LM_STUDIO_URL=http://lm_studio:8080
-    ports:
-      - "8001:8001"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      lm_studio:
-        condition: service_healthy
-
-  log_analyzer:
-    build:
-      context: .
-      dockerfile: docker/agent/Dockerfile
-    environment:
-      - AGENT_TYPE=log_analyzer
-      - PORT=8002
-      - REDIS_URL=redis://redis:6379
-      - MONGODB_URL=mongodb://mongodb:27017
-      - LM_STUDIO_URL=http://lm_studio:8080
-    ports:
-      - "8002:8002"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      lm_studio:
-        condition: service_healthy
-
-  pipeline_manager:
-    build:
-      context: .
-      dockerfile: docker/agent/Dockerfile
-    environment:
-      - AGENT_TYPE=pipeline_manager
-      - PORT=8003
-      - REDIS_URL=redis://redis:6379
-      - MONGODB_URL=mongodb://mongodb:27017
-      - LM_STUDIO_URL=http://lm_studio:8080
-    ports:
-      - "8003:8003"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      lm_studio:
-        condition: service_healthy
-
-  plugin_manager:
-    build:
-      context: .
-      dockerfile: docker/agent/Dockerfile
-    environment:
-      - AGENT_TYPE=plugin_manager
-      - PORT=8004
-      - REDIS_URL=redis://redis:6379
-      - MONGODB_URL=mongodb://mongodb:27017
-      - LM_STUDIO_URL=http://lm_studio:8080
-    ports:
-      - "8004:8004"
-    depends_on:
-      redis:
-        condition: service_healthy
-      mongodb:
-        condition: service_healthy
-      lm_studio:
-        condition: service_healthy
-
-  # LLM Service
-  lm_studio:
-    image: lmstudio/lmstudio:latest
-    volumes:
-      - ./models:/models
-    environment:
-      - MODEL_PATH=/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
-    ports:
-      - "8080:8080"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Monitoring
-  monitor:
-    build:
-      context: .
-      dockerfile: docker/monitor/Dockerfile
-    ports:
-      - "9090:9090"
-    environment:
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      redis:
-        condition: service_healthy
-
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    ports:
-      - "9091:9090"
-    depends_on:
-      - monitor
-
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - grafana_data:/var/lib/grafana
-    ports:
-      - "3000:3000"
-    depends_on:
-      - prometheus
+      - mongodb_data:/data/db
 
 volumes:
   redis_data:
-  mongo_data:
-  prometheus_data:
-  grafana_data:
+  mongodb_data:
