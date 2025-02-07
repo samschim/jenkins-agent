@@ -1,106 +1,103 @@
-# Enhanced Pipeline Management System
+# Improved User Interfaces
 
-This PR adds comprehensive pipeline management capabilities to the Jenkins LangChain Agent system.
+This PR adds significant improvements to the user interfaces of the Jenkins LangChain Agent system.
 
 ## Features
 
-### 1. Intelligent Pipeline Generation
-- Project type detection (Java, Python, Node.js, Docker)
-- Template-based generation
-- Requirement-driven customization
-- Best practices enforcement
+### 1. Interactive Chat Mode
+- Rich terminal interface with syntax highlighting
+- Command history and help system
+- Real-time feedback and progress indicators
+- Support for complex queries
 
-### 2. Security Scanning and Hardening
-- Pattern-based security scanning
-- Vulnerability detection
-- Automated security fixes
-- Compliance checking
+### 2. Enhanced CLI
+- More commands with better parameter handling
+- Rich output formatting with tables and colors
+- Progress indicators and status messages
+- Improved error handling and feedback
 
-### 3. Pipeline Optimization
-- Performance analysis
-- Resource usage optimization
-- Parallel execution suggestions
-- Caching recommendations
-
-### 4. Comprehensive Validation
-- Syntax validation
-- Security validation
-- Best practices checking
-- Performance validation
+### 3. Web Interface Improvements
+- Modern React components with TypeScript
+- Real-time updates and notifications
+- Interactive dashboard with metrics
+- Code highlighting and markdown support
 
 ## Technical Details
 
-### Pipeline Generator
+### Interactive Chat
 ```python
-async def generate_pipeline(
-    self,
-    project_type: str,
-    requirements: List[str],
-    validate: bool = True
-) -> Dict[str, Any]:
-    # Generate pipeline from template
-    # Customize based on requirements
-    # Validate if requested
+class InteractiveChat:
+    async def start(self):
+        """Start interactive chat session."""
+        while True:
+            command = await aioconsole.ainput("> ")
+            if command.lower() == "exit":
+                break
+            result = await self.supervisor.handle_task(command)
+            self._display_response(result)
 ```
 
-### Security Scanner
+### Enhanced CLI
 ```python
-async def scan_pipeline(self, pipeline: str) -> Dict[str, Any]:
-    # Check for security issues
-    # Analyze vulnerabilities
-    # Generate recommendations
+@cli.command()
+@click.argument('job_name')
+@click.option('--type', '-t', default='java')
+@click.option('--with-tests/--no-tests', default=True)
+async def create_job(job_name, type, with_tests):
+    """Create a new Jenkins job."""
+    supervisor = SupervisorAgent()
+    result = await supervisor.handle_task(
+        f"Create a new {type} job named {job_name}"
+    )
 ```
 
-### Pipeline Manager
-```python
-async def handle_task(self, task: str) -> Dict[str, Any]:
-    # Route to appropriate function
-    # Handle errors gracefully
-    # Return results
+## Usage Examples
+
+### Interactive Mode
+```bash
+# Start interactive mode
+jenkins-agent chat
+
+> Create a new pipeline for Python project
+Creating pipeline...
+Pipeline created successfully!
+
+> Analyze build logs for my-project
+Analyzing logs...
+Found 3 potential issues...
+```
+
+### CLI Commands
+```bash
+# Create a job
+jenkins-agent create-job my-project --type python --with-tests
+
+# Analyze logs
+jenkins-agent analyze my-project
+
+# Show metrics
+jenkins-agent metrics
 ```
 
 ## Testing
 
 All new functionality is covered by unit tests:
-
 ```bash
-pytest tests/unit/test_pipeline_tools.py
-pytest tests/unit/test_enhanced_pipeline_manager.py
-```
-
-## Example Usage
-
-1. Create a new pipeline:
-```python
-result = await manager.handle_task(
-    "Create a new pipeline for Java project with testing and deployment"
-)
-```
-
-2. Scan for security issues:
-```python
-result = await manager.handle_task(
-    "Scan my-pipeline for security issues"
-)
-```
-
-3. Optimize pipeline:
-```python
-result = await manager.handle_task(
-    "Optimize my-pipeline for better performance"
-)
+pytest tests/cli/
+pytest tests/web/
 ```
 
 ## Future Improvements
 
-1. Add more project templates
-2. Enhance security rules
-3. Implement machine learning for optimization
-4. Add more validation checks
+1. Add more CLI commands
+2. Enhance web interface with more features
+3. Add support for custom themes
+4. Implement real-time notifications
 
 ## Deployment Notes
 
 This change requires:
-- OpenAI API access
-- Jenkins API access
-- Updated environment variables
+- Python 3.8+
+- Click for CLI
+- Rich for terminal formatting
+- React for web interface
