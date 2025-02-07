@@ -1,104 +1,82 @@
-# Phase 1: LangChain Jenkins Agent System Implementation
+# Enhanced Supervisor Agent with Embedding-Based Task Routing and Metrics Collection
 
-This PR implements the first phase of the LangChain Jenkins Agent system, which provides an intelligent interface for managing Jenkins CI/CD operations using natural language.
+This PR enhances the supervisor agent with more intelligent task routing using embeddings and adds comprehensive metrics collection capabilities.
 
-## Features Implemented
+## Changes
 
-### Core Components
-- **Base Agent Architecture**: Created a flexible base agent class for all specialized agents
-- **Configuration System**: Added a modular configuration system using environment variables
-- **Jenkins API Tools**: Implemented asynchronous tools for Jenkins API interaction
+### 1. Embedding-Based Task Routing
+- Added `EmbeddingManager` class for managing task and capability embeddings
+- Replaced simple keyword-based routing with semantic similarity matching
+- Improved accuracy of task routing to specialized agents
 
-### Specialized Agents
-1. **Build Manager Agent**
-   - Trigger builds
-   - Check build status
-   - Get build logs
-   - Basic build management
+### 2. Metrics Collection
+- Added `MetricsCollector` class for comprehensive metrics gathering
+- Collects build and pipeline metrics with caching
+- Generates automated recommendations based on metrics
+- Provides insights about system health and performance
 
-2. **Log Analyzer Agent**
-   - Analyze build logs
-   - Identify errors and patterns
-   - Generate insights from logs
-   - Multi-build log analysis
+### 3. Enhanced Supervisor Agent
+- Integrated embedding-based routing
+- Added metrics collection and insights generation
+- Improved error handling and logging
+- Better handling of complex tasks
 
-3. **Pipeline Manager Agent**
-   - Pipeline status monitoring
-   - Stage information retrieval
-   - Performance analysis
-   - Pipeline definition management
-
-4. **Supervisor Agent**
-   - Task routing to specialized agents
-   - Complex task handling
-   - Agent coordination
-   - Error handling
-
-### Tools and Utilities
-- **Jenkins API Client**: Async HTTP client for Jenkins API
-- **Log Analysis Tools**: LLM-powered log analysis
-- **Pipeline Tools**: Pipeline management and analysis
+### 4. Testing
+- Added unit tests for metrics collection
+- Added unit tests for enhanced supervisor functionality
+- Improved test coverage and error handling tests
 
 ## Technical Details
 
-### Architecture
-- Asynchronous design using `httpx` and `asyncio`
-- LangChain integration for natural language understanding
-- Modular and extensible agent system
-- Redis integration for caching (prepared)
-
-### Dependencies
-- langchain>=0.0.300
-- openai>=0.28.0
-- httpx>=0.24.1
-- redis>=5.0.0
-- python-dotenv>=1.0.0
-
-## Usage Example
+### Embedding-Based Routing
+The new routing system uses OpenAI embeddings to calculate semantic similarity between tasks and agent capabilities. This provides more accurate and flexible task routing compared to the previous keyword-based approach.
 
 ```python
-from langchain_jenkins.agents.supervisor import SupervisorAgent
-
-# Initialize supervisor
-supervisor = SupervisorAgent()
-
-# Handle a simple task
-result = await supervisor.handle_task("Start build for project-x")
-
-# Handle a complex task
-result = await supervisor.handle_complex_task(
-    "Check the build status of project-x and analyze its logs"
-)
+async def _determine_agent(self, task: str) -> str:
+    return await self.embedding_manager.find_best_agent(task)
 ```
 
-## Next Steps
-1. Implement plugin management agent
-2. Add user management capabilities
-3. Enhance error handling and recovery
-4. Add more sophisticated log analysis
-5. Implement caching system
-6. Add comprehensive testing suite
+### Metrics Collection
+The metrics collector gathers comprehensive data about builds and pipelines:
+- Build success rates and durations
+- Pipeline performance metrics
+- Resource utilization
+- Automated recommendations
 
-## Testing Instructions
-1. Set up environment variables in `.env`:
-   ```
-   JENKINS_URL=http://your-jenkins-server:8080
-   JENKINS_USER=your-username
-   JENKINS_API_TOKEN=your-api-token
-   OPENAI_API_KEY=your-openai-key
-   ```
+```python
+async def collect_metrics(self) -> Dict[str, Any]:
+    build_metrics = await self.collect_build_metrics()
+    pipeline_metrics = await self.collect_pipeline_metrics()
+    recommendations = await self.generate_recommendations(
+        build_metrics,
+        pipeline_metrics
+    )
+    return {
+        "builds": build_metrics,
+        "pipelines": pipeline_metrics,
+        "recommendations": recommendations
+    }
+```
 
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Testing
 
-3. Run a test task:
-   ```bash
-   python -m langchain_jenkins.main --task "Get status of project-x pipeline"
-   ```
+All new functionality is covered by unit tests:
 
-## Documentation
-- Implementation plan and architecture details in `langchain_jenkins/docs/`
-- Code documentation in docstrings
-- More documentation to be added in Phase 2
+```bash
+pytest tests/unit/test_metrics.py -v
+pytest tests/unit/test_enhanced_supervisor.py -v
+```
+
+## Future Improvements
+
+1. Add more sophisticated metrics analysis
+2. Implement trend analysis over time
+3. Add machine learning for predictive analytics
+4. Enhance recommendation system with more context
+
+## Deployment Notes
+
+This change requires:
+- OpenAI API access for embeddings
+- Redis for metrics caching
+- Additional environment variables for API configuration
