@@ -47,27 +47,6 @@ install_docker() {
     rm get-docker.sh
 }
 
-# Function to install LM Studio
-install_lm_studio() {
-    log_message "Setting up LM Studio..."
-    
-    # Create LM Studio Docker container
-    docker run -d \
-        --name lm-studio \
-        --restart unless-stopped \
-        -p $LM_STUDIO_PORT:8080 \
-        -v $HOME/lm-studio/models:/models \
-        -e MODEL_PATH=/models/$LM_STUDIO_MODEL \
-        lmstudio/lmstudio:latest
-
-    # Download model if not exists
-    if [ ! -f "$HOME/lm-studio/models/$LM_STUDIO_MODEL" ]; then
-        mkdir -p "$HOME/lm-studio/models"
-        wget -P "$HOME/lm-studio/models" \
-            "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/$LM_STUDIO_MODEL"
-    fi
-}
-
 # Function to install monitoring stack
 install_monitoring() {
     log_message "Setting up monitoring stack..."
@@ -467,9 +446,6 @@ main() {
     if ! command -v docker &> /dev/null; then
         install_docker
     fi
-    
-    # Install LM Studio
-    install_lm_studio
     
     # Install monitoring stack
     install_monitoring
