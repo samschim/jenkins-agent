@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jenkins-agent
+  labels:
+    name: jenkins-agent
+    environment: production

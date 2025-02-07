@@ -1,0 +1,214 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook
+  namespace: jenkins-agent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: webhook
+  template:
+    metadata:
+      labels:
+        app: webhook
+    spec:
+      containers:
+      - name: webhook
+        image: jenkins-agent-webhook:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: jenkins-agent-config
+        - secretRef:
+            name: jenkins-agent-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifier
+  namespace: jenkins-agent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notifier
+  template:
+    metadata:
+      labels:
+        app: notifier
+    spec:
+      containers:
+      - name: notifier
+        image: jenkins-agent-notifier:latest
+        envFrom:
+        - configMapRef:
+            name: jenkins-agent-config
+        - secretRef:
+            name: jenkins-agent-secret
+        livenessProbe:
+          exec:
+            command: ["pgrep", "-f", "notifier.py"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: build-manager
+  namespace: jenkins-agent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: build-manager
+  template:
+    metadata:
+      labels:
+        app: build-manager
+    spec:
+      containers:
+      - name: build-manager
+        image: jenkins-agent-agent:latest
+        env:
+        - name: AGENT_TYPE
+          value: build_manager
+        - name: PORT
+          value: "8001"
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - configMapRef:
+            name: jenkins-agent-config
+        - secretRef:
+            name: jenkins-agent-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-analyzer
+  namespace: jenkins-agent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: log-analyzer
+  template:
+    metadata:
+      labels:
+        app: log-analyzer
+    spec:
+      containers:
+      - name: log-analyzer
+        image: jenkins-agent-agent:latest
+        env:
+        - name: AGENT_TYPE
+          value: log_analyzer
+        - name: PORT
+          value: "8002"
+        ports:
+        - containerPort: 8002
+        envFrom:
+        - configMapRef:
+            name: jenkins-agent-config
+        - secretRef:
+            name: jenkins-agent-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-manager
+  namespace: jenkins-agent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pipeline-manager
+  template:
+    metadata:
+      labels:
+        app: pipeline-manager
+    spec:
+      containers:
+      - name: pipeline-manager
+        image: jenkins-agent-agent:latest
+        env:
+        - name: AGENT_TYPE
+          value: pipeline_manager
+        - name: PORT
+          value: "8003"
+        ports:
+        - containerPort: 8003
+        envFrom:
+        - configMapRef:
+            name: jenkins-agent-config
+        - secretRef:
+            name: jenkins-agent-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plugin-manager
+  namespace: jenkins-agent
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: plugin-manager
+  template:
+    metadata:
+      labels:
+        app: plugin-manager
+    spec:
+      containers:
+      - name: plugin-manager
+        image: jenkins-agent-agent:latest
+        env:
+        - name: AGENT_TYPE
+          value: plugin_manager
+        - name: PORT
+          value: "8004"
+        ports:
+        - containerPort: 8004
+        envFrom:
+        - configMapRef:
+            name: jenkins-agent-config
+        - secretRef:
+            name: jenkins-agent-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 30
+          periodSeconds: 10
