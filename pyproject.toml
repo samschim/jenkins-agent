@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["langchain_jenkins"]
+
+[project]
+name = "langchain_jenkins"
+version = "0.1.0"
+description = "LangChain-based Jenkins agent system"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "OpenHands", email = "openhands@all-hands.dev" },
+]
+dependencies = [
+    "langchain>=0.0.300",
+    "openai>=0.28.0",
+    "httpx>=0.24.1",
+    "redis>=5.0.0",
+    "python-dotenv>=1.0.0",
+    "psutil>=5.9.0",
+    "prometheus-client>=0.17.0",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "pandas>=2.1.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.6",
+    "click>=8.1.0",
+    "rich>=13.5.0",
+    "discord.py>=2.3.0",
+    "motor>=3.3.0",
+    "pymongo>=4.6.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+    "aioresponses>=0.7.4",
+    "fakeredis>=2.19.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=langchain_jenkins --cov-report=term-missing"
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["langchain_jenkins"]
+omit = ["tests/*", "**/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+]
