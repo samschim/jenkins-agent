@@ -79,6 +79,27 @@ services:
       timeout: 5s
       retries: 3
 
+  github-sync:
+    build:
+      context: .
+      dockerfile: docker/github-sync/Dockerfile
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_USERNAME=${GITHUB_USERNAME}
+      - SYNC_INTERVAL=${SYNC_INTERVAL:-300}
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    networks:
+      - jenkins_net
+    depends_on:
+      jenkins:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "test", "-f", "/var/jenkins_home/logs/sync.log"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   jenkins_net:
     driver: bridge
