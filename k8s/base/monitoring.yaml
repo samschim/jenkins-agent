@@ -1,147 +1,85 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Service
 metadata:
-  name: monitor
-  namespace: jenkins-agent
+  name: monitoring
 spec:
-  replicas: 1
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: grafana
+    - port: 9090
+      targetPort: 9090
+      name: prometheus
+    - port: 9100
+      targetPort: 9100
+      name: node-exporter
   selector:
-    matchLabels:
-      app: monitor
-  template:
-    metadata:
-      labels:
-        app: monitor
-    spec:
-      containers:
-      - name: monitor
-        image: jenkins-agent-monitor:latest
-        ports:
-        - containerPort: 9090
-        envFrom:
-        - configMapRef:
-            name: jenkins-agent-config
-        livenessProbe:
-          httpGet:
-            path: /metrics
-            port: 9090
-          initialDelaySeconds: 30
-          periodSeconds: 10
+    app: monitoring
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prometheus
-  namespace: jenkins-agent
+  name: monitoring
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: prometheus
+      app: monitoring
   template:
     metadata:
       labels:
-        app: prometheus
+        app: monitoring
     spec:
       containers:
-      - name: prometheus
-        image: prom/prometheus:latest
-        ports:
-        - containerPort: 9090
-        volumeMounts:
-        - name: prometheus-config
-          mountPath: /etc/prometheus
+        - name: monitoring
+          image: jenkins-agent-monitoring:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: grafana
+            - containerPort: 9090
+              name: prometheus
+            - containerPort: 9100
+              name: node-exporter
+          env:
+            - name: JENKINS_URL
+              value: http://jenkins:8080
+            - name: JENKINS_USER
+              value: admin
+            - name: JENKINS_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jenkins-secrets
+                  key: api-token
+          volumeMounts:
+            - name: prometheus-data
+              mountPath: /prometheus
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
         - name: prometheus-data
-          mountPath: /prometheus
-        livenessProbe:
-          httpGet:
-            path: /-/healthy
-            port: 9090
-          initialDelaySeconds: 30
-          periodSeconds: 10
-      volumes:
-      - name: prometheus-config
-        configMap:
-          name: prometheus-config
-      - name: prometheus-data
-        persistentVolumeClaim:
-          claimName: prometheus-data
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: grafana
-  namespace: jenkins-agent
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: grafana
-  template:
-    metadata:
-      labels:
-        app: grafana
-    spec:
-      containers:
-      - name: grafana
-        image: grafana/grafana:latest
-        ports:
-        - containerPort: 3000
-        volumeMounts:
+          persistentVolumeClaim:
+            claimName: prometheus-data
         - name: grafana-data
-          mountPath: /var/lib/grafana
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-      volumes:
-      - name: grafana-data
-        persistentVolumeClaim:
-          claimName: grafana-data
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: monitor
-  namespace: jenkins-agent
-spec:
-  ports:
-  - port: 9090
-    targetPort: 9090
-  selector:
-    app: monitor
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: prometheus
-  namespace: jenkins-agent
-spec:
-  ports:
-  - port: 9090
-    targetPort: 9090
-  selector:
-    app: prometheus
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafana
-  namespace: jenkins-agent
-spec:
-  ports:
-  - port: 3000
-    targetPort: 3000
-  selector:
-    app: grafana
+          persistentVolumeClaim:
+            claimName: grafana-data
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: prometheus-data
-  namespace: jenkins-agent
 spec:
   accessModes:
     - ReadWriteOnce
@@ -153,7 +91,6 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: grafana-data
-  namespace: jenkins-agent
 spec:
   accessModes:
     - ReadWriteOnce

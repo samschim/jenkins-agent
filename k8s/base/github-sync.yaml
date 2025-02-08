@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-sync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-sync
+  template:
+    metadata:
+      labels:
+        app: github-sync
+    spec:
+      containers:
+        - name: github-sync
+          image: jenkins-agent-github-sync:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: github-secrets
+                  key: token
+            - name: GITHUB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: github-secrets
+                  key: username
+            - name: SYNC_INTERVAL
+              value: "300"
+          volumeMounts:
+            - name: workspace
+              mountPath: /var/jenkins_home/workspace
+            - name: backups
+              mountPath: /var/jenkins_home/backups
+            - name: logs
+              mountPath: /var/jenkins_home/logs
+          livenessProbe:
+            exec:
+              command:
+                - test
+                - -f
+                - /var/jenkins_home/logs/sync.log
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: jenkins-home-jenkins-0
+        - name: backups
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}

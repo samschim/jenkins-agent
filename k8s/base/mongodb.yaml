@@ -1,8 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    app: mongodb
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongodb
-  namespace: jenkins-agent
 spec:
   serviceName: mongodb
   replicas: 1
@@ -15,46 +25,34 @@ spec:
         app: mongodb
     spec:
       containers:
-      - name: mongodb
-        image: mongo:6
-        ports:
-        - containerPort: 27017
-        volumeMounts:
-        - name: mongodb-data
-          mountPath: /data/db
-        livenessProbe:
-          exec:
-            command:
-              - mongo
-              - --eval
-              - "db.adminCommand('ping')"
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          exec:
-            command:
-              - mongo
-              - --eval
-              - "db.adminCommand('ping')"
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: mongodb
+          image: mongo:6
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 30
+            periodSeconds: 30
   volumeClaimTemplates:
-  - metadata:
-      name: mongodb-data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 20Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongodb
-  namespace: jenkins-agent
-spec:
-  ports:
-  - port: 27017
-    targetPort: 27017
-  selector:
-    app: mongodb
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
