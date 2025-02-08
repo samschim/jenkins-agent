@@ -1,10 +1,20 @@
-# Build stage
-FROM python:3.8-slim as builder
+# Build stage for React frontend
+FROM node:16-alpine as frontend-builder
 
-# Set build arguments
+WORKDIR /app/frontend
+
+# Copy frontend files
+COPY langchain_jenkins/web/frontend/package*.json ./
+RUN npm ci
+
+COPY langchain_jenkins/web/frontend/ ./
+RUN npm run build
+
+# Build stage for Python backend
+FROM python:3.8-slim as backend-builder
+
 ARG POETRY_VERSION=1.4.2
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -25,7 +35,6 @@ RUN apt-get update \
 RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV PATH="$POETRY_HOME/bin:$PATH"
 
-# Set working directory
 WORKDIR /app
 
 # Copy project files
@@ -39,7 +48,6 @@ RUN poetry install --no-dev --no-root
 # Runtime stage
 FROM python:3.8-slim
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
@@ -48,7 +56,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
-        git \
+        nginx \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -56,12 +64,19 @@ RUN useradd -m -u 1000 jenkins \
     && mkdir -p /app /app/logs /app/data \
     && chown -R jenkins:jenkins /app
 
-# Set working directory
+# Configure nginx
+COPY docker/web/nginx.conf /etc/nginx/nginx.conf
+RUN mkdir -p /var/log/nginx \
+    && chown -R jenkins:jenkins /var/log/nginx \
+    && chown -R jenkins:jenkins /var/lib/nginx
+
 WORKDIR /app
 
-# Copy from builder
-COPY --from=builder /usr/local/lib/python3.8/site-packages /usr/local/lib/python3.8/site-packages
-COPY --from=builder /app/langchain_jenkins ./langchain_jenkins
+# Copy built frontend
+COPY --from=frontend-builder /app/frontend/build /app/static
+# Copy Python packages
+COPY --from=backend-builder /usr/local/lib/python3.8/site-packages /usr/local/lib/python3.8/site-packages
+COPY --from=backend-builder /app/langchain_jenkins ./langchain_jenkins
 
 # Switch to non-root user
 USER jenkins
@@ -71,8 +86,10 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose ports
-EXPOSE 8000
+EXPOSE 8000 80
 
-# Set entrypoint and default command
-ENTRYPOINT ["python", "-m"]
-CMD ["langchain_jenkins.web.app"]
+# Start script
+COPY docker/web/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]
