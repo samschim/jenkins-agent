@@ -79,6 +79,32 @@ services:
       timeout: 5s
       retries: 3
 
+  monitoring:
+    build:
+      context: .
+      dockerfile: docker/monitoring/Dockerfile
+    ports:
+      - "3000:3000"  # Grafana
+      - "9090:9090"  # Prometheus
+      - "9100:9100"  # Node Exporter
+    volumes:
+      - prometheus_data:/prometheus
+      - grafana_data:/var/lib/grafana
+    networks:
+      - jenkins_net
+    depends_on:
+      jenkins:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   github-sync:
     build:
       context: .
@@ -108,3 +134,5 @@ volumes:
   jenkins_home:
   redis_data:
   mongodb_data:
+  prometheus_data:
+  grafana_data:
